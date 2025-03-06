@@ -3,8 +3,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-
-import 'opacity_overlay_circle.dart';
+import 'package:prato_do_dia/widgets/opacity_overlay_circle.dart';
 
 class CameraOverlayPage extends StatefulWidget {
   final CameraDescription camera;

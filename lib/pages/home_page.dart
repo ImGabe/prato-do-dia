@@ -1,7 +1,8 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'camera_overlay_page.dart';
-import 'main.dart'; // Import the camera page
+import 'package:prato_do_dia/main.dart';
+import 'package:prato_do_dia/pages/camera_overlay_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -53,11 +54,11 @@ class _HomePageState extends State<HomePage> {
           children: [
             _selectedImage != null
                 ? Image.file(
-              _selectedImage!,
-              width: 200,
-              height: 200,
-              fit: BoxFit.cover,
-            )
+                    _selectedImage!,
+                    width: 200,
+                    height: 200,
+                    fit: BoxFit.cover,
+                  )
                 : const Text("Nenhuma imagem selecionada"),
             const SizedBox(height: 20),
             ElevatedButton(

@@ -1,0 +1,2 @@
+C:/Users/gabri/StudioProjects/prato-do-dia/android/app/.cxx/Debug/6d4f4j1x/x86/CMakeFiles/edit_cache.dir
+C:/Users/gabri/StudioProjects/prato-do-dia/android/app/.cxx/Debug/6d4f4j1x/x86/CMakeFiles/rebuild_cache.dir
