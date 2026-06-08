@@ -67,8 +67,12 @@ class _CameraOverlayPageState extends State<CameraOverlayPage> {
   @override
   void initState() {
     super.initState();
-    // Inicializa o controlador da câmera com a câmera fornecida e resolução muito alta
-    _controller = CameraController(widget.camera, ResolutionPreset.veryHigh);
+    // Inicializa o controlador da câmera com a câmera fornecida, resolução muito alta e áudio desativado
+    _controller = CameraController(
+      widget.camera,
+      ResolutionPreset.veryHigh,
+      enableAudio: false,
+    );
 
     // Inicializa o controlador - retorna um Future que completa quando a câmera estiver pronta
     _initializeControllerFuture = _controller.initialize();
