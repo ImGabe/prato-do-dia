@@ -26,7 +26,7 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         color: Colors.grey[50], // Cor de fundo cinza claro
         borderRadius: BorderRadius.circular(16), // Bordas arredondadas
-        border: Border.all(color: Colors.orange.withOpacity(0.3)), // Borda laranja
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)), // Borda laranja
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start, // Alinhamento à esquerda
