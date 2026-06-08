@@ -79,7 +79,7 @@ class CircleOverlayPainter extends CustomPainter {
 
     // Adiciona um "x" no centro para ajudar no enquadramento do prato
     final centerPaint = Paint()
-      ..color = Colors.white.withOpacity(0.5) // Branco semi-transparente
+      ..color = Colors.white.withValues(alpha: 0.5) // Branco semi-transparente
       ..strokeWidth = 2; // Espessura da linha: 2 pixels
 
     // Desenha a linha horizontal do "x"

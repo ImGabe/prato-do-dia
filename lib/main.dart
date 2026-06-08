@@ -11,7 +11,7 @@ Future<void> main() async {
   try {
     cameras = await availableCameras(); // Preenche a variável global
   } catch (e) {
-    print("Erro ao carregar câmeras: $e");
+    debugPrint("Erro ao carregar câmeras: $e");
     cameras = []; // Mantém lista vazia em caso de erro
   }
 

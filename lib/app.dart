@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:prato_do_dia/pages/home_page.dart';
 
 // Classe principal do aplicativo que configura e iniciatodo o projeto
@@ -15,7 +16,7 @@ class MyApp extends StatelessWidget {
       // Tema visual personalizado do aplicativo
       theme: ThemeData(
         primarySwatch: Colors.orange, // Cor primária laranja (tema alimentar)
-        fontFamily: 'Poppins', // Fonte moderna e legível paratodo o app
+        textTheme: GoogleFonts.poppinsTextTheme(), // Carrega a fonte Poppins dinamicamente
 
         // Personalização específica da AppBar
         appBarTheme: const AppBarTheme(

@@ -12,7 +12,7 @@ class CameraOverlayPage extends StatefulWidget {
   const CameraOverlayPage({super.key, required this.camera});
 
   @override
-  _CameraOverlayPageState createState() => _CameraOverlayPageState();
+  State<CameraOverlayPage> createState() => _CameraOverlayPageState();
 }
 
 class _CameraOverlayPageState extends State<CameraOverlayPage> {
@@ -125,7 +125,7 @@ class _CameraOverlayPageState extends State<CameraOverlayPage> {
                         // Sombra no texto para melhor contraste sobre o preview
                         Shadow(
                           blurRadius: 10,
-                          color: Colors.black.withOpacity(0.8),
+                          color: Colors.black.withValues(alpha: 0.8),
                           offset: const Offset(0, 0),
                         )
                       ],

@@ -9,7 +9,7 @@ class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
-  _HomePageState createState() => _HomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
@@ -71,7 +71,7 @@ class _HomePageState extends State<HomePage> {
             children: List<Widget>.from(
               _foodData!['ingredients'].map((ingredient) => Chip(
                 label: Text(ingredient),
-                backgroundColor: Colors.orange.withOpacity(0.1), // Fundo laranja claro
+                backgroundColor: Colors.orange.withValues(alpha: 0.1), // Fundo laranja claro
               )),
             ),
           ),
@@ -111,7 +111,7 @@ class _HomePageState extends State<HomePage> {
           borderRadius: BorderRadius.circular(12), // Bordas arredondadas
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1), // Sombra sutil
+              color: Colors.grey.withValues(alpha: 0.1), // Sombra sutil
               blurRadius: 4, // Desfoque da sombra
               offset: const Offset(0, 2), // Direção da sombra (para baixo)
             )
@@ -204,6 +204,7 @@ class _HomePageState extends State<HomePage> {
         _isProcessing = false; // Desativa carregamento em caso de erro
       });
       // Mostra mensagem de erro para o usuário
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao processar imagem: $e')),
       );
@@ -238,7 +239,7 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(16), // Borda arredondada
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.3), // Sombra
+                      color: Colors.grey.withValues(alpha: 0.3), // Sombra
                       blurRadius: 10, // Desfoque
                       offset: const Offset(0, 4), // Direção
                     )
@@ -282,7 +283,7 @@ class _HomePageState extends State<HomePage> {
               Icon(
                 Icons.restaurant, // Ícone de restaurante
                 size: 150,
-                color: Colors.orange.withOpacity(0.7), // Cor laranja
+                color: Colors.orange.withValues(alpha: 0.7), // Cor laranja
               ),
               const SizedBox(height: 30), // Espaçamento
             ],
