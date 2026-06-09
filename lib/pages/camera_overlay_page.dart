@@ -37,23 +37,12 @@ class _CameraOverlayPageState extends State<CameraOverlayPage> {
 
       if (widget.isDevMode) {
         // Modo Desenvolvedor: Coleta contínua de fotos brutas sem fechar a câmera
-        Directory? datasetDir;
-        if (Platform.isAndroid) {
-          final List<Directory>? extDirs = await getExternalStorageDirectories(type: StorageDirectory.pictures);
-          if (extDirs != null && extDirs.isNotEmpty) {
-            datasetDir = Directory('${extDirs.first.path}/dataset');
-          }
-        } else {
-          final Directory documentsDir = await getApplicationDocumentsDirectory();
-          datasetDir = Directory('${documentsDir.path}/Pictures/dataset');
-        }
-
-        if (datasetDir != null) {
-          await datasetDir.create(recursive: true);
-        }
+        final Directory documentsDir = await getApplicationDocumentsDirectory();
+        final Directory datasetDir = Directory('${documentsDir.path}/dataset');
+        await datasetDir.create(recursive: true);
 
         final String fileName = 'img_raw_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final String destPath = '${datasetDir!.path}/$fileName';
+        final String destPath = '${datasetDir.path}/$fileName';
 
         // Copia o JPEG bruto original da câmera para o dataset local
         final File file = File(image.path);

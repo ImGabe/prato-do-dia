@@ -327,19 +327,9 @@ class _HomePageState extends State<HomePage> {
 
   // Auxiliar para obter a pasta do dataset em modo desenvolvedor
   Future<Directory?> _getDatasetDirectory() async {
-    Directory? dir;
-    if (Platform.isAndroid) {
-      final List<Directory>? extDirs = await getExternalStorageDirectories(type: StorageDirectory.pictures);
-      if (extDirs != null && extDirs.isNotEmpty) {
-        dir = Directory('${extDirs.first.path}/dataset');
-      }
-    } else {
-      final Directory documentsDir = await getApplicationDocumentsDirectory();
-      dir = Directory('${documentsDir.path}/Pictures/dataset');
-    }
-    if (dir != null) {
-      await dir.create(recursive: true);
-    }
+    final Directory documentsDir = await getApplicationDocumentsDirectory();
+    final Directory dir = Directory('${documentsDir.path}/dataset');
+    await dir.create(recursive: true);
     return dir;
   }
 
