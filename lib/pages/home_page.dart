@@ -47,58 +47,60 @@ class _HomePageState extends State<HomePage> {
     final controller = TextEditingController(text: _apiBaseUrl);
     String? errorText;
 
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('API Settings'),
-              content: TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  labelText: 'API URL',
-                  hintText: 'http://192.168.1.15:42917',
-                  errorText: errorText,
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                title: const Text('API Settings'),
+                content: TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    labelText: 'API URL',
+                    hintText: 'http://192.168.1.15:42917',
+                    errorText: errorText,
+                  ),
+                  keyboardType: TextInputType.url,
                 ),
-                keyboardType: TextInputType.url,
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    final input = controller.text.trim();
-                    final uri = Uri.tryParse(input);
-                    final isValidUri = uri != null &&
-                        (uri.scheme == 'http' || uri.scheme == 'https') &&
-                        uri.host.isNotEmpty;
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      final input = controller.text.trim();
+                      final uri = Uri.tryParse(input);
+                      final isValidUri = uri != null &&
+                          (uri.scheme == 'http' || uri.scheme == 'https') &&
+                          uri.host.isNotEmpty;
 
-                    if (!isValidUri) {
-                      setDialogState(() {
-                        errorText =
-                            'Enter a valid URL with http:// or https://';
+                      if (!isValidUri) {
+                        setDialogState(() {
+                          errorText =
+                              'Enter a valid URL with http:// or https://';
+                        });
+                        return;
+                      }
+
+                      setState(() {
+                        _apiBaseUrl = input;
                       });
-                      return;
-                    }
-
-                    setState(() {
-                      _apiBaseUrl = input;
-                    });
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    controller.dispose();
+                      Navigator.pop(dialogContext);
+                    },
+                    child: const Text('Save'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      controller.dispose();
+    }
   }
 
   @override
