@@ -1,29 +1,27 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prato_do_dia/app.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const App());
+  testWidgets('Valida o carregamento inicial da HomePage', (WidgetTester tester) async {
+    // Reconstrói o app e dispara o frame.
+    await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verifica se o título "Prato do Dia" é exibido.
+    expect(find.text('Prato do Dia'), findsWidgets);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Verifica se o texto de instrução inicial está presente.
+    expect(
+      find.text('Descubra as informações nutricionais do seu prato'),
+      findsOneWidget,
+    );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verifica se os botões "Tirar Foto" e "Galeria" estão presentes.
+    expect(find.text('Tirar Foto'), findsOneWidget);
+    expect(find.text('Galeria'), findsOneWidget);
+
+    // Verifica se o ícone ilustrativo de restaurante é exibido na inicialização.
+    expect(find.byIcon(Icons.restaurant), findsOneWidget);
   });
 }
+
