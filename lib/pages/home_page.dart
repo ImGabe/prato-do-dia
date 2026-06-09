@@ -5,6 +5,9 @@ import 'package:prato_do_dia/main.dart';
 import 'package:prato_do_dia/pages/camera_overlay_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+const String defaultApiBaseUrl = 'http://10.0.2.2:42917';
+const String apiBaseUrlPreferenceKey = 'api_base_url';
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -13,11 +16,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static const String _defaultApiBaseUrl = 'http://10.0.2.2:42917';
-  static const String _apiBaseUrlPreferenceKey = 'api_base_url';
-
   File? _selectedImage;
-  String _apiBaseUrl = _defaultApiBaseUrl;
+  String _apiBaseUrl = defaultApiBaseUrl;
 
   @override
   void initState() {
@@ -27,20 +27,20 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadApiBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
-    final storedApiBaseUrl = prefs.getString(_apiBaseUrlPreferenceKey);
+    final storedApiBaseUrl = prefs.getString(apiBaseUrlPreferenceKey);
 
     if (!mounted) {
       return;
     }
 
     setState(() {
-      _apiBaseUrl = storedApiBaseUrl ?? _defaultApiBaseUrl;
+      _apiBaseUrl = storedApiBaseUrl ?? defaultApiBaseUrl;
     });
   }
 
   Future<void> _saveApiBaseUrl(String apiBaseUrl) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_apiBaseUrlPreferenceKey, apiBaseUrl);
+    await prefs.setString(apiBaseUrlPreferenceKey, apiBaseUrl);
 
     if (!mounted) {
       return;
@@ -82,7 +82,23 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    if (!_isValidApiBaseUrl(newApiBaseUrl)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid API Base URL.')),
+      );
+      return;
+    }
+
     await _saveApiBaseUrl(newApiBaseUrl);
+  }
+
+  bool _isValidApiBaseUrl(String value) {
+    final uri = Uri.tryParse(value);
+    if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
+      return false;
+    }
+
+    return uri.scheme == 'http' || uri.scheme == 'https';
   }
 
   Future<void> _takePicture() async {
