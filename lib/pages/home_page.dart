@@ -25,6 +25,7 @@ class _HomePageState extends State<HomePage> {
   String _apiBaseUrl = 'http://10.0.2.2:42917'; // URL base padrão da API (Android Emulator)
   bool _showOverlay = true; // Controla se mostra a imagem de overlay ou original
   String _processingStatus = "Analisando seu prato..."; // Mensagem de processamento
+  bool _isDevCollectorMode = false; // Modo desenvolvedor para coletar fotos do dataset
 
   @override
   void initState() {
@@ -32,73 +33,95 @@ class _HomePageState extends State<HomePage> {
     _loadApiUrl();
   }
 
-  // Carrega a URL da API salva anteriormente no storage local
+  // Carrega a URL da API e configurações salvas anteriormente no storage local
   Future<void> _loadApiUrl() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _apiBaseUrl = prefs.getString('api_base_url') ?? 'http://10.0.2.2:42917';
+      _isDevCollectorMode = prefs.getBool('is_dev_collector_mode') ?? false;
     });
   }
 
   // Abre um diálogo para alterar a URL base da API
   void _showSettingsDialog() {
     final controller = TextEditingController(text: _apiBaseUrl);
+    bool localDevMode = _isDevCollectorMode;
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text("Configurações da API"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Insira a URL base da API FastAPI (ex: http://10.0.2.2:42917 no emulador Android ou o IP do computador na rede local para celular físico):",
-                style: TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(
-                  labelText: "URL Base da API",
-                  hintText: "http://<IP_DO_COMPUTADOR>:<PORTA>",
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancelar"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final newUrl = controller.text.trim();
-                final uri = Uri.tryParse(newUrl);
-                if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('URL inválida. Use o formato: http://ip:porta'),
-                      backgroundColor: Colors.redAccent,
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text("Configurações da API"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "Insira a URL base da API FastAPI (ex: http://10.0.2.2:42917 no emulador Android ou o IP do computador na rede local para celular físico):",
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      labelText: "URL Base da API",
+                      hintText: "http://<IP_DO_COMPUTADOR>:<PORTA>",
+                      border: OutlineInputBorder(),
                     ),
-                  );
-                  return;
-                }
-                setState(() {
-                  _apiBaseUrl = newUrl;
-                });
-                final navigator = Navigator.of(context);
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setString('api_base_url', newUrl);
-                navigator.pop();
-                scaffoldMessenger.showSnackBar(
-                  SnackBar(content: Text('URL da API salva: $_apiBaseUrl')),
-                );
-              },
-              child: const Text("Salvar"),
-            ),
-          ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  SwitchListTile(
+                    title: const Text("Modo Coletor (Dev)"),
+                    subtitle: const Text("Salva fotos brutas originais localmente na pasta do dataset sem enviar à API"),
+                    value: localDevMode,
+                    activeThumbColor: Colors.orange,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (val) {
+                      setDialogState(() {
+                        localDevMode = val;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancelar"),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final newUrl = controller.text.trim();
+                    final uri = Uri.tryParse(newUrl);
+                    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('URL inválida. Use o formato: http://ip:porta'),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                      return;
+                    }
+                    setState(() {
+                      _apiBaseUrl = newUrl;
+                      _isDevCollectorMode = localDevMode;
+                    });
+                    final navigator = Navigator.of(context);
+                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setString('api_base_url', newUrl);
+                    await prefs.setBool('is_dev_collector_mode', localDevMode);
+                    navigator.pop();
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(content: Text('Configurações salvas! Modo Coletor: ${localDevMode ? "Ativado" : "Desativado"}')),
+                    );
+                  },
+                  child: const Text("Salvar"),
+                ),
+              ],
+            );
+          }
         );
       },
     );
@@ -302,6 +325,24 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Auxiliar para obter a pasta do dataset em modo desenvolvedor
+  Future<Directory?> _getDatasetDirectory() async {
+    Directory? dir;
+    if (Platform.isAndroid) {
+      final List<Directory>? extDirs = await getExternalStorageDirectories(type: StorageDirectory.pictures);
+      if (extDirs != null && extDirs.isNotEmpty) {
+        dir = Directory('${extDirs.first.path}/dataset');
+      }
+    } else {
+      final Directory documentsDir = await getApplicationDocumentsDirectory();
+      dir = Directory('${documentsDir.path}/Pictures/dataset');
+    }
+    if (dir != null) {
+      await dir.create(recursive: true);
+    }
+    return dir;
+  }
+
   // Função para abrir a câmera e tirar uma foto
   Future<void> _takePicture() async {
     // Verifica se há câmeras disponíveis
@@ -316,13 +357,26 @@ class _HomePageState extends State<HomePage> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CameraOverlayPage(camera: cameras.first),
+        builder: (context) => CameraOverlayPage(
+          camera: cameras.first,
+          isDevMode: _isDevCollectorMode,
+        ),
       ),
     );
 
-    // Se retornou uma imagem, processa ela
-    if (result != null && result is File) {
+    if (!mounted) return;
+
+    // Se retornou uma imagem, processa ela (apenas no modo normal)
+    if (!_isDevCollectorMode && result != null && result is File) {
       _processImage(result);
+    } else if (_isDevCollectorMode) {
+      // Notifica o término da sessão no modo desenvolvedor
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sessão de coleta encerrada. Fotos salvas no dispositivo.'),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
@@ -334,7 +388,33 @@ class _HomePageState extends State<HomePage> {
 
     // Se selecionou uma imagem, processa ela
     if (pickedFile != null) {
-      _processImage(File(pickedFile.path));
+      final file = File(pickedFile.path);
+      if (_isDevCollectorMode) {
+        try {
+          final Directory? extDir = await _getDatasetDirectory();
+          if (extDir != null) {
+            final String fileName = 'img_gallery_${DateTime.now().millisecondsSinceEpoch}.jpg';
+            final String filePath = '${extDir.path}/$fileName';
+            await file.copy(filePath);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Imagem da galeria salva no dataset: $fileName'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Erro ao salvar imagem no dataset: $e'), backgroundColor: Colors.redAccent),
+            );
+          }
+        }
+      } else {
+        _processImage(file);
+      }
     }
   }
 
@@ -474,6 +554,39 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center, // Centraliza horizontalmente
           children: [
+            if (_isDevCollectorMode) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.developer_mode, color: Colors.orange),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "MODO DEV: COLETOR ATIVO",
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                          ),
+                          Text(
+                            "As fotos tiradas serão salvas brutas no dispositivo para treino.",
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
             const SizedBox(height: 20), // Espaçamento
             // Texto explicativo
             const Text(

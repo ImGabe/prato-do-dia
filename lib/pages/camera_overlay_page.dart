@@ -8,8 +8,13 @@ import 'package:prato_do_dia/widgets/opacity_overlay_circle.dart';
 // Página que exibe a câmera com um overlay circular para enquadrar o prato
 class CameraOverlayPage extends StatefulWidget {
   final CameraDescription camera;
+  final bool isDevMode;
 
-  const CameraOverlayPage({super.key, required this.camera});
+  const CameraOverlayPage({
+    super.key,
+    required this.camera,
+    this.isDevMode = false,
+  });
 
   @override
   State<CameraOverlayPage> createState() => _CameraOverlayPageState();
@@ -30,35 +35,71 @@ class _CameraOverlayPageState extends State<CameraOverlayPage> {
       // Captura a foto - retorna um arquivo XFile
       final XFile image = await _controller.takePicture();
 
-      // Obtém o diretório de documentos do aplicativo
-      final Directory extDir = await getApplicationDocumentsDirectory();
+      if (widget.isDevMode) {
+        // Modo Desenvolvedor: Coleta contínua de fotos brutas sem fechar a câmera
+        Directory? datasetDir;
+        if (Platform.isAndroid) {
+          final List<Directory>? extDirs = await getExternalStorageDirectories(type: StorageDirectory.pictures);
+          if (extDirs != null && extDirs.isNotEmpty) {
+            datasetDir = Directory('${extDirs.first.path}/dataset');
+          }
+        } else {
+          final Directory documentsDir = await getApplicationDocumentsDirectory();
+          datasetDir = Directory('${documentsDir.path}/Pictures/dataset');
+        }
 
-      // Define o caminho para salvar as imagens
-      final String dirPath = '${extDir.path}/Pictures/prato_do_dia';
+        if (datasetDir != null) {
+          await datasetDir.create(recursive: true);
+        }
 
-      // Cria o diretório se não existir (recursive: true cria subdiretórios)
-      await Directory(dirPath).create(recursive: true);
+        final String fileName = 'img_raw_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final String destPath = '${datasetDir!.path}/$fileName';
 
-      // Cria um nome único para o arquivo usando timestamp
-      final String filePath = '$dirPath/${DateTime.now().millisecondsSinceEpoch}.jpg';
+        // Copia o JPEG bruto original da câmera para o dataset local
+        final File file = File(image.path);
+        await file.copy(destPath);
 
-      // Converte XFile para File
-      final File file = File(image.path);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Foto salva no dataset: $fileName'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // Modo Normal: Processamento e navegação
+        // Obtém o diretório de documentos do aplicativo
+        final Directory extDir = await getApplicationDocumentsDirectory();
 
-      // Copia a imagem para o local permanente com nome único
-      final File newImage = await file.copy(filePath);
+        // Define o caminho para salvar as imagens
+        final String dirPath = '${extDir.path}/Pictures/prato_do_dia';
 
-      // Verifica se o widget ainda está montado antes de navegar
-      if (mounted) {
-        // Retorna para a tela anterior enviando a imagem capturada
-        Navigator.pop(context, newImage);
+        // Cria o diretório se não existir (recursive: true cria subdiretórios)
+        await Directory(dirPath).create(recursive: true);
+
+        // Cria um nome único para o arquivo usando timestamp
+        final String filePath = '$dirPath/${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+        // Converte XFile para File
+        final File file = File(image.path);
+
+        // Copia a imagem para o local permanente com nome único
+        final File newImage = await file.copy(filePath);
+
+        // Verifica se o widget ainda está montado antes de navegar
+        if (mounted) {
+          // Retorna para a tela anterior enviando a imagem capturada
+          Navigator.pop(context, newImage);
+        }
       }
     } catch (e) {
       // Trata erros durante a captura da foto
       if (mounted) {
         // Exibe mensagem de erro para o usuário
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao tirar foto: $e')),
+          SnackBar(content: Text('Erro ao tirar foto: $e'), backgroundColor: Colors.redAccent),
         );
       }
     }
@@ -159,6 +200,19 @@ class _CameraOverlayPageState extends State<CameraOverlayPage> {
                   opacity: 0.6, // Opacidade do overlay
                 ),
               ),
+
+              if (widget.isDevMode)
+                Positioned(
+                  top: 50,
+                  right: 20,
+                  child: CircleAvatar(
+                    backgroundColor: Colors.black.withValues(alpha: 0.5),
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                ),
 
               // Texto instrucional no topo da tela
               Positioned(
