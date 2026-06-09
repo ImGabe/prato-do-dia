@@ -183,8 +183,87 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
+          const Divider(height: 32),
+          _buildDetectionDetails(),
         ],
       ),
+    );
+  }
+
+  // Constrói a lista detalhada de componentes identificados pela IA
+  Widget _buildDetectionDetails() {
+    final List<dynamic>? components = _foodData!['components'];
+    if (components == null || components.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Componentes Identificados (IA):",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        const SizedBox(height: 12),
+        ...components.map((comp) {
+          final double confidence = (comp['confidence'] as num).toDouble() * 100;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Ícone ilustrativo com cor dinâmica baseada na confiança
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: (confidence > 80 ? Colors.green : Colors.orange).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_circle_outline,
+                    color: confidence > 80 ? Colors.green : Colors.orange,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            comp['label'],
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          Text(
+                            "${confidence.toStringAsFixed(0)}% conf.",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: confidence > 80 ? Colors.green : Colors.orange,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "${comp['calories']} kcal | Prot: ${comp['protein']}g | Carb: ${comp['carbs']}g | Gord: ${comp['fat']}g",
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 
