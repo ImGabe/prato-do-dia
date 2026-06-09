@@ -71,6 +71,26 @@ class _CameraOverlayPageState extends State<CameraOverlayPage> {
                   return Center(child: CircularProgressIndicator());
                 }
 
+                if (snapshot.hasError || !_controller.value.isInitialized) {
+                  return Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          "Permissão de câmera negada. Por favor, habilite o acesso nas configurações do aparelho.",
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Voltar'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 return Stack(
                   children: [
                     Center(
