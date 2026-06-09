@@ -35,21 +35,44 @@ adb start-server &> /dev/null
 
 # 3. Aguardar o dispositivo móvel ser conectado via USB
 echo -e "${YELLOW}[!] Por favor, conecte o celular Android via cabo USB com a 'Depuração USB' ativada.${NC}"
-echo -e "${BLUE}[*] Aguardando conexão do dispositivo...${NC}"
+echo -e "${BLUE}[*] Aguardando conexão de dispositivo(s)...${NC}"
 
 while true; do
     # Verifica dispositivos conectados e autorizados
-    devices_list=$(adb devices | grep -v "List of devices" | grep "device$")
+    mapfile -t devices_array < <(adb devices | grep -v "List of devices" | grep "device$")
     unauthorized_list=$(adb devices | grep -v "List of devices" | grep "unauthorized$")
     
     if [ ! -z "$unauthorized_list" ]; then
         echo -e "${RED}[⚠️] Dispositivo detectado mas NÃO autorizado! Verifique a tela do seu celular e autorize a depuração.${NC}"
     fi
     
-    if [ ! -z "$devices_list" ]; then
-        device_name=$(echo "$devices_list" | awk '{print $1}')
-        echo -e "${GREEN}[✓] Dispositivo conectado e pronto: $device_name${NC}"
-        break
+    num_devices=${#devices_array[@]}
+    
+    if [ "$num_devices" -gt 0 ]; then
+        if [ "$num_devices" -eq 1 ]; then
+            device_line="${devices_array[0]}"
+            device_name=$(echo "$device_line" | awk '{print $1}')
+            echo -e "${GREEN}[✓] Único dispositivo conectado e pronto: $device_name${NC}"
+            break
+        else
+            echo -e "${YELLOW}[!] Múltiplos dispositivos conectados detectados:${NC}"
+            for i in "${!devices_array[@]}"; do
+                d_name=$(echo "${devices_array[$i]}" | awk '{print $1}')
+                echo -e "  [$((i+1))] $d_name"
+            done
+            
+            while true; do
+                read -r -p "Escolha o número do dispositivo para rodar (1-$num_devices): " choice
+                if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$num_devices" ]; then
+                    selected_index=$((choice - 1))
+                    device_name=$(echo "${devices_array[$selected_index]}" | awk '{print $1}')
+                    echo -e "${GREEN}[✓] Dispositivo selecionado: $device_name${NC}"
+                    break 2
+                else
+                    echo -e "${RED}[✗] Escolha inválida. Tente novamente.${NC}"
+                fi
+            done
+        fi
     fi
     sleep 2
 done
