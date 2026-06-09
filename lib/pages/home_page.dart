@@ -83,11 +83,12 @@ class _HomePageState extends State<HomePage> {
                 setState(() {
                   _apiBaseUrl = newUrl;
                 });
+                final navigator = Navigator.of(context);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setString('api_base_url', newUrl);
-                if (!mounted) return;
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                navigator.pop();
+                scaffoldMessenger.showSnackBar(
                   SnackBar(content: Text('URL da API salva: $_apiBaseUrl')),
                 );
               },
@@ -291,7 +292,7 @@ class _HomePageState extends State<HomePage> {
           'Erro no servidor (${response.statusCode}): ${response.body}',
         );
       }
-    } on TimeoutException catch (e) {
+    } on TimeoutException catch (_) {
       setState(() {
         _isProcessing = false; // Desativa carregamento em caso de erro
       });
