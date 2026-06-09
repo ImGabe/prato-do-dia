@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:prato_do_dia/pages/camera_overlay_page.dart';
 import 'package:prato_do_dia/main.dart';
 
@@ -19,6 +21,20 @@ class _HomePageState extends State<HomePage> {
   bool _isProcessing = false; // Controla o estado de processamento
   Map<String, dynamic>? _foodData; // Armazena os dados nutricionais recebidos
   String _apiBaseUrl = 'http://10.0.2.2:42917'; // URL base padrão da API (Android Emulator)
+
+  @override
+  void initState() {
+    super.initState();
+    _loadApiUrl();
+  }
+
+  // Carrega a URL da API salva anteriormente no storage local
+  Future<void> _loadApiUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _apiBaseUrl = prefs.getString('api_base_url') ?? 'http://10.0.2.2:42917';
+    });
+  }
 
   // Abre um diálogo para alterar a URL base da API
   void _showSettingsDialog() {
@@ -52,13 +68,27 @@ class _HomePageState extends State<HomePage> {
               child: const Text("Cancelar"),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                final newUrl = controller.text.trim();
+                final uri = Uri.tryParse(newUrl);
+                if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('URL inválida. Use o formato: http://ip:porta'),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                  return;
+                }
                 setState(() {
-                  _apiBaseUrl = controller.text.trim();
+                  _apiBaseUrl = newUrl;
                 });
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setString('api_base_url', newUrl);
+                if (!mounted) return;
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('URL da API atualizada para: $_apiBaseUrl')),
+                  SnackBar(content: Text('URL da API salva: $_apiBaseUrl')),
                 );
               },
               child: const Text("Salvar"),
@@ -246,8 +276,8 @@ class _HomePageState extends State<HomePage> {
         ),
       );
 
-      // Envia a requisição
-      final streamedResponse = await request.send();
+      // Envia a requisição com tempo limite de 15 segundos
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
@@ -261,6 +291,17 @@ class _HomePageState extends State<HomePage> {
           'Erro no servidor (${response.statusCode}): ${response.body}',
         );
       }
+    } on TimeoutException catch (e) {
+      setState(() {
+        _isProcessing = false; // Desativa carregamento em caso de erro
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erro: Tempo limite de conexão esgotado (15s). Servidor indisponível.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     } catch (e) {
       setState(() {
         _isProcessing = false; // Desativa carregamento em caso de erro
@@ -368,7 +409,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 // Botão para tirar foto
                 ElevatedButton.icon(
-                  onPressed: _takePicture, // Abre câmera
+                  onPressed: _isProcessing ? null : _takePicture, // Desabilita se processando
                   icon: const Icon(Icons.camera_alt),
                   label: const Text("Tirar Foto"),
                   style: ElevatedButton.styleFrom(
@@ -381,7 +422,7 @@ class _HomePageState extends State<HomePage> {
 
                 // Botão para selecionar da galeria
                 ElevatedButton.icon(
-                  onPressed: _selectImage, // Abre galeria
+                  onPressed: _isProcessing ? null : _selectImage, // Desabilita se processando
                   icon: const Icon(Icons.photo_library),
                   label: const Text("Galeria"),
                   style: ElevatedButton.styleFrom(

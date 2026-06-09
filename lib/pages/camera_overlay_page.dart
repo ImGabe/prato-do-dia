@@ -92,6 +92,50 @@ class _CameraOverlayPageState extends State<CameraOverlayPage> {
       body: FutureBuilder(
         future: _initializeControllerFuture, // Future da inicialização da câmera
         builder: (context, snapshot) {
+          // Se houver erro na inicialização da câmera (ex: permissão negada)
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.redAccent,
+                      size: 80,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "Erro ao acessar a câmera",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Não foi possível inicializar a câmera. Por favor, certifique-se de que a permissão foi concedida nas configurações do seu dispositivo.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text("Voltar"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           // Verifica se a câmera ainda está inicializando
           if (snapshot.connectionState != ConnectionState.done) {
             // Mostra indicador de carregamento enquanto a câmera não está pronta
