@@ -13,6 +13,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   File? _selectedImage;
+  String _apiBaseUrl = '';
 
   Future<void> _takePicture() async {
     if (cameras.isEmpty) {
@@ -42,11 +43,76 @@ class _HomePageState extends State<HomePage> {
     throw UnimplementedError();
   }
 
+  Future<void> _showSettingsDialog() async {
+    final controller = TextEditingController(text: _apiBaseUrl);
+    String? errorText;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('API Settings'),
+              content: TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  labelText: 'API URL',
+                  hintText: 'http://192.168.1.15:42917',
+                  errorText: errorText,
+                ),
+                keyboardType: TextInputType.url,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final input = controller.text.trim();
+                    final uri = Uri.tryParse(input);
+                    final isValidUri = uri != null &&
+                        (uri.scheme == 'http' || uri.scheme == 'https') &&
+                        uri.host.isNotEmpty;
+
+                    if (!isValidUri) {
+                      setDialogState(() {
+                        errorText =
+                            'Enter a valid URL with http:// or https://';
+                      });
+                      return;
+                    }
+
+                    setState(() {
+                      _apiBaseUrl = input;
+                    });
+                    Navigator.pop(dialogContext);
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Prato do dia"),
+        actions: [
+          IconButton(
+            onPressed: _showSettingsDialog,
+            icon: const Icon(Icons.settings),
+            tooltip: 'API Settings',
+          ),
+        ],
       ),
       body: Center(
         child: Column(

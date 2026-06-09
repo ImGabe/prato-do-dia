@@ -1,29 +1,49 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:prato_do_dia/app.dart';
+import 'package:prato_do_dia/pages/home_page.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const App());
+  testWidgets('invalid API URL shows validation error', (tester) async {
+    await tester.pumpWidget(const TestApp(child: HomePage()));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.tap(find.byTooltip('API Settings'));
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await tester.enterText(find.byType(TextField), '192.168.1.15:42917');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(
+      find.text('Enter a valid URL with http:// or https://'),
+      findsOneWidget,
+    );
+    expect(find.text('API Settings'), findsOneWidget);
   });
+
+  testWidgets('valid API URL closes settings dialog', (tester) async {
+    await tester.pumpWidget(const TestApp(child: HomePage()));
+
+    await tester.tap(find.byTooltip('API Settings'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      'http://192.168.1.15:42917',
+    );
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('API Settings'), findsNothing);
+  });
+}
+
+class TestApp extends StatelessWidget {
+  const TestApp({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(home: child);
+  }
 }
