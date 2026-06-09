@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
 import 'package:prato_do_dia/pages/camera_overlay_page.dart';
 import 'package:prato_do_dia/main.dart';
 
@@ -21,6 +23,8 @@ class _HomePageState extends State<HomePage> {
   bool _isProcessing = false; // Controla o estado de processamento
   Map<String, dynamic>? _foodData; // Armazena os dados nutricionais recebidos
   String _apiBaseUrl = 'http://10.0.2.2:42917'; // URL base padrão da API (Android Emulator)
+  bool _showOverlay = true; // Controla se mostra a imagem de overlay ou original
+  String _processingStatus = "Analisando seu prato..."; // Mensagem de processamento
 
   @override
   void initState() {
@@ -255,13 +259,65 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Corta e comprime a imagem em quadrado central de 640x640 com 80% de qualidade
+  Future<File> _optimizeImage(File originalFile) async {
+    setState(() {
+      _processingStatus = "Otimizando imagem...";
+    });
+
+    final bytes = await originalFile.readAsBytes();
+    
+    // Decodifica a imagem usando a biblioteca 'image'
+    final image = img.decodeImage(bytes);
+    if (image == null) return originalFile;
+
+    // Encontra a menor dimensão para fazer um crop quadrado no centro
+    final int width = image.width;
+    final int height = image.height;
+    final int size = width < height ? width : height;
+
+    final int x = (width - size) ~/ 2;
+    final int y = (height - size) ~/ 2;
+
+    // Corta a imagem para o quadrado central
+    final cropped = img.copyCrop(image, x: x, y: y, width: size, height: size);
+
+    // Redimensiona para a resolução nativa do YOLO (640x640)
+    final resized = img.copyResize(cropped, width: 640, height: 640);
+
+    // Comprime para JPEG com qualidade 80
+    final compressedBytes = img.encodeJpg(resized, quality: 80);
+
+    // Salva em um arquivo temporário permanente na sessão
+    final tempDir = await getTemporaryDirectory();
+    final tempFile = File('${tempDir.path}/optimized_${DateTime.now().millisecondsSinceEpoch}.jpg');
+    await tempFile.writeAsBytes(compressedBytes);
+
+    return tempFile;
+  }
+
   // Processa a imagem (envia para API e recebe os dados reais)
   Future<void> _processImage(File imageFile) async {
     setState(() {
       _isProcessing = true; // Ativa indicador de carregamento
       _selectedImage = imageFile; // Armazena a imagem
       _foodData = null; // Limpa dados anteriores
+      _showOverlay = true; // Exibe o overlay por padrão
     });
+
+    File optimizedFile = imageFile;
+    try {
+      optimizedFile = await _optimizeImage(imageFile);
+      setState(() {
+        _selectedImage = optimizedFile;
+        _processingStatus = "Analisando seu prato...";
+      });
+    } catch (e) {
+      debugPrint("Erro ao otimizar imagem: $e");
+      setState(() {
+        _processingStatus = "Analisando seu prato...";
+      });
+    }
 
     try {
       final request = http.MultipartRequest(
@@ -269,11 +325,11 @@ class _HomePageState extends State<HomePage> {
         Uri.parse('$_apiBaseUrl/meals/analyze'),
       );
       
-      // Adiciona o arquivo de imagem à requisição
+      // Adiciona o arquivo de imagem otimizado à requisição
       request.files.add(
         await http.MultipartFile.fromPath(
           'file',
-          imageFile.path,
+          optimizedFile.path,
         ),
       );
 
@@ -346,7 +402,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 30), // Espaçamento
 
-            // Se há imagem selecionada, mostra ela
+            // Se há imagem selecionada, mostra ela (com suporte a alternar overlay)
             if (_selectedImage != null) ...[
               Container(
                 decoration: BoxDecoration(
@@ -359,14 +415,49 @@ class _HomePageState extends State<HomePage> {
                     )
                   ],
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16), // Borda arredondada
-                  child: Image.file(
-                    _selectedImage!, // Imagem selecionada
-                    width: 250,
-                    height: 250,
-                    fit: BoxFit.cover, // Preenche o espaço
-                  ),
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16), // Borda arredondada
+                      child: (_showOverlay && _foodData != null && _foodData!['overlay_url'] != null)
+                          ? Image.network(
+                              '$_apiBaseUrl${_foodData!['overlay_url']}',
+                              width: 250,
+                              height: 250,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Image.file(
+                                  _selectedImage!,
+                                  width: 250,
+                                  height: 250,
+                                  fit: BoxFit.cover,
+                                );
+                              },
+                            )
+                          : Image.file(
+                              _selectedImage!, // Imagem selecionada local
+                              width: 250,
+                              height: 250,
+                              fit: BoxFit.cover,
+                            ),
+                    ),
+                    if (_foodData != null && _foodData!['overlay_url'] != null)
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: FloatingActionButton.small(
+                          onPressed: () {
+                            setState(() {
+                              _showOverlay = !_showOverlay;
+                            });
+                          },
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          tooltip: _showOverlay ? "Ver Foto Original" : "Ver Segmentação",
+                          child: Icon(_showOverlay ? Icons.visibility_off : Icons.visibility),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 20), // Espaçamento
@@ -374,15 +465,15 @@ class _HomePageState extends State<HomePage> {
 
             // Se está processando, mostra indicador de carregamento
             if (_isProcessing) ...[
-              const Column(
+              Column(
                 children: [
-                  CircularProgressIndicator( // Indicador circular
+                  const CircularProgressIndicator( // Indicador circular
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
                   ),
-                  SizedBox(height: 16), // Espaçamento
+                  const SizedBox(height: 16), // Espaçamento
                   Text(
-                    "Analisando seu prato...", // Texto de carregamento
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                    _processingStatus, // Texto de carregamento dinâmico
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                 ],
               ),
