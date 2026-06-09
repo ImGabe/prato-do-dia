@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:prato_do_dia/main.dart';
 import 'package:prato_do_dia/pages/camera_overlay_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -12,7 +13,77 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const String _defaultApiBaseUrl = 'http://10.0.2.2:42917';
+  static const String _apiBaseUrlPreferenceKey = 'api_base_url';
+
   File? _selectedImage;
+  String _apiBaseUrl = _defaultApiBaseUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadApiBaseUrl();
+  }
+
+  Future<void> _loadApiBaseUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedApiBaseUrl = prefs.getString(_apiBaseUrlPreferenceKey);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _apiBaseUrl = storedApiBaseUrl ?? _defaultApiBaseUrl;
+    });
+  }
+
+  Future<void> _saveApiBaseUrl(String apiBaseUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_apiBaseUrlPreferenceKey, apiBaseUrl);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _apiBaseUrl = apiBaseUrl;
+    });
+  }
+
+  Future<void> _openSettingsDialog() async {
+    final controller = TextEditingController(text: _apiBaseUrl);
+
+    final newApiBaseUrl = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Settings'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'API Base URL'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+
+    if (newApiBaseUrl == null || newApiBaseUrl.isEmpty) {
+      return;
+    }
+
+    await _saveApiBaseUrl(newApiBaseUrl);
+  }
 
   Future<void> _takePicture() async {
     if (cameras.isEmpty) {
@@ -47,6 +118,12 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Prato do dia"),
+        actions: [
+          IconButton(
+            onPressed: _openSettingsDialog,
+            icon: const Icon(Icons.settings),
+          ),
+        ],
       ),
       body: Center(
         child: Column(

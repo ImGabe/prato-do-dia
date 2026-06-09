@@ -1,29 +1,58 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:prato_do_dia/app.dart';
+import 'package:prato_do_dia/pages/home_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const App());
+  const defaultApiBaseUrl = 'http://10.0.2.2:42917';
+  const apiBaseUrlPreferenceKey = 'api_base_url';
+  const customApiBaseUrl = 'http://192.168.0.42:42917';
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  Future<void> pumpHomePage(WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: HomePage(),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('loads default API URL when no value is stored',
+      (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await pumpHomePage(tester);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+
+    expect(find.text(defaultApiBaseUrl), findsOneWidget);
+  });
+
+  testWidgets('loads stored API URL value from preferences',
+      (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues(
+      {apiBaseUrlPreferenceKey: customApiBaseUrl},
+    );
+    await pumpHomePage(tester);
+
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+
+    expect(find.text(customApiBaseUrl), findsOneWidget);
+  });
+
+  testWidgets('saves API URL updates to preferences', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await pumpHomePage(tester);
+
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), customApiBaseUrl);
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString(apiBaseUrlPreferenceKey), customApiBaseUrl);
   });
 }
