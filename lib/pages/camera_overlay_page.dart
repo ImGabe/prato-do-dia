@@ -87,6 +87,9 @@ class _CameraOverlayPageState extends State<CameraOverlayPage> {
 
   @override
   Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double circleDiameter = screenWidth * 0.85; // 85% de largura da tela
+
     return Scaffold(
       backgroundColor: Colors.black, // Fundo preto para modo câmera
       body: FutureBuilder(
@@ -149,10 +152,10 @@ class _CameraOverlayPageState extends State<CameraOverlayPage> {
               CameraPreview(_controller),
 
               // Overlay circular centralizado para ajudar no enquadramento
-              const Align(
+              Align(
                 alignment: Alignment.center,
                 child: CircleOverlay(
-                  circleDiameter: 250, // Diâmetro do círculo
+                  circleDiameter: circleDiameter, // Diâmetro do círculo dinâmico
                   opacity: 0.6, // Opacidade do overlay
                 ),
               ),

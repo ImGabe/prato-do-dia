@@ -271,16 +271,18 @@ class _HomePageState extends State<HomePage> {
     final image = img.decodeImage(bytes);
     if (image == null) return originalFile;
 
-    // Encontra a menor dimensão para fazer um crop quadrado no centro
     final int width = image.width;
     final int height = image.height;
-    final int size = width < height ? width : height;
+    
+    // O tamanho do crop box corresponde a 85% do menor lado da foto (combinando com o overlay circular de 85% da tela)
+    final int referenceWidth = width < height ? width : height;
+    final int cropSize = (referenceWidth * 0.85).round();
 
-    final int x = (width - size) ~/ 2;
-    final int y = (height - size) ~/ 2;
+    final int x = (width - cropSize) ~/ 2;
+    final int y = (height - cropSize) ~/ 2;
 
-    // Corta a imagem para o quadrado central
-    final cropped = img.copyCrop(image, x: x, y: y, width: size, height: size);
+    // Corta a imagem para o quadrado correspondente ao overlay
+    final cropped = img.copyCrop(image, x: x, y: y, width: cropSize, height: cropSize);
 
     // Redimensiona para a resolução nativa do YOLO (640x640)
     final resized = img.copyResize(cropped, width: 640, height: 640);
