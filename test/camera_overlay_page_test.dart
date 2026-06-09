@@ -11,10 +11,17 @@ void main() {
       lensDirection: CameraLensDirection.back,
       sensorOrientation: 90,
     );
+    final controller = CameraController(camera, ResolutionPreset.high);
 
     await tester.pumpWidget(
-      const MaterialApp(
-        home: CameraOverlayPage(camera: camera),
+      MaterialApp(
+        home: CameraOverlayPage(
+          camera: camera,
+          controller: controller,
+          initializeControllerFuture: Future<void>.error(
+            CameraException('CameraAccessDenied', 'Permission denied'),
+          ),
+        ),
       ),
     );
 

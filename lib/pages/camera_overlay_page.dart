@@ -7,8 +7,15 @@ import 'package:prato_do_dia/widgets/opacity_overlay_circle.dart';
 
 class CameraOverlayPage extends StatefulWidget {
   final CameraDescription camera;
+  final CameraController? controller;
+  final Future<void>? initializeControllerFuture;
 
-  const CameraOverlayPage({super.key, required this.camera});
+  const CameraOverlayPage({
+    super.key,
+    required this.camera,
+    this.controller,
+    this.initializeControllerFuture,
+  });
 
   @override
   _CameraOverlayPageState createState() => _CameraOverlayPageState();
@@ -17,6 +24,7 @@ class CameraOverlayPage extends StatefulWidget {
 class _CameraOverlayPageState extends State<CameraOverlayPage> {
   late CameraController _controller;
   late Future<void> _initializeControllerFuture;
+  late bool _ownsController;
 
   Future<void> _takePicture() async {
     if (!_controller.value.isInitialized) {
@@ -50,13 +58,18 @@ class _CameraOverlayPageState extends State<CameraOverlayPage> {
   void initState() {
     super.initState();
 
-    _controller = CameraController(widget.camera, ResolutionPreset.high);
-    _initializeControllerFuture = _controller.initialize();
+    _controller =
+        widget.controller ?? CameraController(widget.camera, ResolutionPreset.high);
+    _ownsController = widget.controller == null;
+    _initializeControllerFuture =
+        widget.initializeControllerFuture ?? _controller.initialize();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    if (_ownsController) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
