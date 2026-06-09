@@ -1,5 +1,7 @@
-import 'dart:io'; //
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:prato_do_dia/pages/camera_overlay_page.dart';
 import 'package:prato_do_dia/main.dart';
@@ -16,6 +18,56 @@ class _HomePageState extends State<HomePage> {
   File? _selectedImage; // Armazena a imagem selecionada/tiranda
   bool _isProcessing = false; // Controla o estado de processamento
   Map<String, dynamic>? _foodData; // Armazena os dados nutricionais recebidos
+  String _apiBaseUrl = 'http://10.0.2.2:42917'; // URL base padrão da API (Android Emulator)
+
+  // Abre um diálogo para alterar a URL base da API
+  void _showSettingsDialog() {
+    final controller = TextEditingController(text: _apiBaseUrl);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Configurações da API"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Insira a URL base da API FastAPI (ex: http://10.0.2.2:42917 no emulador Android ou o IP do computador na rede local para celular físico):",
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: "URL Base da API",
+                  hintText: "http://<IP_DO_COMPUTADOR>:<PORTA>",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancelar"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _apiBaseUrl = controller.text.trim();
+                });
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('URL da API atualizada para: $_apiBaseUrl')),
+                );
+              },
+              child: const Text("Salvar"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   // Constrói o widget que exibe as informações nutricionais do prato
   Widget _buildFoodInfo() {
@@ -172,7 +224,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Processa a imagem (simula envio para API e recebimento de dados)
+  // Processa a imagem (envia para API e recebe os dados reais)
   Future<void> _processImage(File imageFile) async {
     setState(() {
       _isProcessing = true; // Ativa indicador de carregamento
@@ -181,24 +233,34 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      // Simula tempo de processamento da API (2 segundos)
-      await Future.delayed(const Duration(seconds: 2));
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_apiBaseUrl/meals/analyze'),
+      );
+      
+      // Adiciona o arquivo de imagem à requisição
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          imageFile.path,
+        ),
+      );
 
-      // Dados simulados da API (substituir por chamada real)
-      final simulatedResponse = {
-        'name': 'Prato Feito',
-        'calories': 650,
-        'protein': 25,
-        'carbs': 45,
-        'fat': 15,
-        'ingredients': ['Arroz', 'Feijão', 'Frango', 'Salada'],
-        'score': 8.2,
-      };
+      // Envia a requisição
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
-      setState(() {
-        _foodData = simulatedResponse; // Armazena os dados recebidos
-        _isProcessing = false; // Desativa indicador de carregamento
-      });
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(utf8.decode(response.bodyBytes));
+        setState(() {
+          _foodData = responseData; // Armazena os dados recebidos
+          _isProcessing = false; // Desativa indicador de carregamento
+        });
+      } else {
+        throw HttpException(
+          'Erro no servidor (${response.statusCode}): ${response.body}',
+        );
+      }
     } catch (e) {
       setState(() {
         _isProcessing = false; // Desativa carregamento em caso de erro
@@ -206,7 +268,10 @@ class _HomePageState extends State<HomePage> {
       // Mostra mensagem de erro para o usuário
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao processar imagem: $e')),
+        SnackBar(
+          content: Text('Erro ao processar imagem: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
@@ -217,6 +282,13 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text("Prato do Dia"), // Título do app
         centerTitle: true, // Centraliza o título
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: "Configurações da API",
+            onPressed: _showSettingsDialog,
+          ),
+        ],
       ),
       body: SingleChildScrollView( // Permite rolagem
         padding: const EdgeInsets.all(16), // Padding geral
