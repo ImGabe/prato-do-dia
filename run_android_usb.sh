@@ -79,7 +79,7 @@ done
 
 # 4. Configurar redirecionamento de porta (ADB Reverse)
 echo -e "${BLUE}[*] Configurando redirecionamento da porta 42917 (computador -> celular)...${NC}"
-if adb reverse tcp:42917 tcp:42917; then
+if adb -s "$device_name" reverse tcp:42917 tcp:42917; then
     echo -e "${GREEN}[✓] ADB Reverse configurado com sucesso!${NC}"
     echo -e "${GREEN}    O app no celular poderá se conectar à API em http://localhost:42917${NC}"
 else
